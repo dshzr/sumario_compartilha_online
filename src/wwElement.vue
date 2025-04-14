@@ -112,6 +112,7 @@ export default {
       handler(value) {
         if (this.$refs.editorContent && value !== this.currentHtml) {
           this.$refs.editorContent.innerHTML = value || '';
+          this.currentHtml = value || '';
           
           // Emitir evento de inicialização de valor
           this.$emit('trigger-event', {
@@ -124,8 +125,13 @@ export default {
     },
     'content.initialContent': {
       handler(newValue) {
-        if (this.$refs.editorContent && !this.content.value) {
+        // Se não existir value definido, usar initialContent
+        if (this.$refs.editorContent && (!this.content.value || this.content.value === '')) {
           this.$refs.editorContent.innerHTML = newValue || '';
+          this.currentHtml = newValue || '';
+          
+          // Atualizar o value para manter sincronizado
+          this.$emit('update:content', { value: newValue || '' });
           
           // Emitir evento de inicialização de valor
           this.$emit('trigger-event', {
@@ -133,7 +139,8 @@ export default {
             event: { value: newValue || '' }
           });
         }
-      }
+      },
+      immediate: true
     },
     isEditable: {
       handler(editable) {
