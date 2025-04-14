@@ -22,8 +22,13 @@ export default {
         'pt-BR': 'Altura do Editor',
       },
       type: 'Number',
+      options: {
+        min: 100,
+        max: 1000,
+        step: 50,
+      },
       section: 'settings',
-      defaultValue: 300,
+      defaultValue: 500,
     },
     showToolbar: {
       label: {
