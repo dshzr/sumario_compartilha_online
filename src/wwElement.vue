@@ -52,8 +52,12 @@
         :class="{ 'read-only': !isEditable }" 
         :contenteditable="isEditable"
         @input="handleInput"
-        @focus="$emit('editor:focus')"
-        @blur="$emit('editor:blur')"
+        @change="handleChange"
+        @keyup="handleInput"
+        @paste="handleInput"
+        @focus="handleFocus"
+        @blur="handleBlur"
+        @keydown.enter="handleEnterKey"
       ></div>
     </div>
   </div>
@@ -63,11 +67,23 @@
 export default {
   props: {
     content: { type: Object, required: true },
+    uid: { type: String, required: true },
+    wwElementState: { type: Object, required: true },
   },
+  
+  emits: [
+    'trigger-event',
+    'update:content',
+    'element-event',
+    'add-state',
+    'remove-state',
+  ],
   
   data() {
     return {
       currentHtml: '',
+      isReallyFocused: false,
+      changeTimer: null,
     }
   },
   
@@ -96,6 +112,12 @@ export default {
       handler(value) {
         if (this.$refs.editorContent && value !== this.currentHtml) {
           this.$refs.editorContent.innerHTML = value || '';
+          
+          // Emitir evento de inicialização de valor
+          this.$emit('trigger-event', {
+            name: 'initValueChange',
+            event: { value: value || '' }
+          });
         }
       },
       immediate: true
@@ -104,6 +126,12 @@ export default {
       handler(newValue) {
         if (this.$refs.editorContent && !this.content.value) {
           this.$refs.editorContent.innerHTML = newValue || '';
+          
+          // Emitir evento de inicialização de valor
+          this.$emit('trigger-event', {
+            name: 'initValueChange',
+            event: { value: newValue || '' }
+          });
         }
       }
     },
@@ -111,6 +139,12 @@ export default {
       handler(editable) {
         if (this.$refs.editorContent) {
           this.$refs.editorContent.contentEditable = editable;
+           
+          // Atualizar estado readonly
+          this.$emit('remove-state', 'readonly');
+          if (!editable) {
+            this.$emit('add-state', 'readonly');
+          }
         }
       }
     }
@@ -124,15 +158,42 @@ export default {
     setupEditor() {
       setTimeout(() => {
         if (this.$refs.editorContent) {
-          this.$refs.editorContent.innerHTML = this.content.value || this.content.initialContent || '<p>Comece a digitar aqui...</p>';
+          const initialValue = this.content.value || this.content.initialContent || '<p>Comece a digitar aqui...</p>';
+          this.$refs.editorContent.innerHTML = initialValue;
+          this.currentHtml = initialValue;
+          
+          // Apenas atualiza o valor do content sem disparar onChange
+          this.$emit('update:content', { value: initialValue });
         }
       }, 10);
     },
     
+    // Ação para focar no editor
+    focusInput() {
+      if (this.$refs.editorContent && this.isEditable) {
+        this.$refs.editorContent.focus();
+      }
+    },
+    
     execCommand(command, value) {
       try {
+        // Salva o HTML atual antes da formatação
+        const beforeHtml = this.$refs.editorContent.innerHTML;
+        
+        // Executa o comando
         document.execCommand(command, false, value);
-        this.handleInput();
+        
+        // Obtém o HTML após a formatação
+        const afterHtml = this.$refs.editorContent.innerHTML;
+        
+        // Atualiza o valor atual
+        this.currentHtml = afterHtml;
+        
+        // Emite apenas update:content, não o evento change
+        this.$emit('update:content', { value: afterHtml });
+        
+        // Log para debug
+        console.log('Format command executed:', command);
       } catch (error) {
         console.error(`Erro ao executar comando: ${command}`, error);
       }
@@ -142,12 +203,93 @@ export default {
       if (!this.$refs.editorContent) return;
       
       const html = this.$refs.editorContent.innerHTML;
-      const isEmpty = !this.$refs.editorContent.textContent.trim();
       
-      this.currentHtml = html;
+      // Somente atualiza se o conteúdo realmente mudou
+      if (html !== this.currentHtml) {
+        this.currentHtml = html;
+        
+        // Atualizar valor no content (para bindingSourceProperties)
+        this.$emit('update:content', { value: html });
+        
+        // Disparar o evento change apenas na edição de conteúdo
+        // Limpar qualquer timer anterior
+        if (this.changeTimer) {
+          clearTimeout(this.changeTimer);
+        }
+        
+        // Definir um timer para disparar onChange após 300ms sem atividade
+        // Isso evita disparar para cada tecla pressionada
+        this.changeTimer = setTimeout(() => {
+          // Emitir evento de mudança com o valor atual
+          this.$emit('trigger-event', {
+            name: 'change',
+            event: { value: this.currentHtml }
+          });
+          
+          // Log para debug
+          console.log('Change event emitted on content edit:', this.currentHtml);
+        }, 300);
+      }
+    },
+    
+    handleChange() {
+      if (!this.$refs.editorContent) return;
       
-      this.$emit('update:content', { value: html });
-      this.$emit('editor:update', { html, isEmpty });
+      const html = this.$refs.editorContent.innerHTML;
+      
+      // Verifica se há mudança real no conteúdo
+      if (html !== this.currentHtml) {
+        this.currentHtml = html;
+        
+        // Atualizar valor no content
+        this.$emit('update:content', { value: html });
+        
+        // Emitir evento de mudança com o valor atual
+        this.$emit('trigger-event', {
+          name: 'change',
+          event: { value: html }
+        });
+        
+        // Log para debug
+        console.log('Change event emitted from change handler:', html);
+      }
+    },
+    
+    handleFocus() {
+      this.isReallyFocused = true;
+      
+      // Atualizar estado de foco usando add-state e remove-state
+      this.$emit('add-state', 'focus');
+      
+      // Emitir evento de foco
+      this.$emit('trigger-event', {
+        name: 'focus',
+        event: { value: this.currentHtml }
+      });
+    },
+    
+    handleBlur() {
+      this.isReallyFocused = false;
+      
+      // Atualizar estado de foco usando add-state e remove-state
+      this.$emit('remove-state', 'focus');
+      
+      // Emitir evento de blur
+      this.$emit('trigger-event', {
+        name: 'blur',
+        event: { value: this.currentHtml }
+      });
+    },
+    
+    handleEnterKey(e) {
+      // Somente emite o evento se não estiver pressionando shift
+      // (para permitir quebras de linha com Shift+Enter)
+      if (!e.shiftKey) {
+        this.$emit('trigger-event', {
+          name: 'onEnterKey',
+          event: { value: this.currentHtml }
+        });
+      }
     }
   }
 };

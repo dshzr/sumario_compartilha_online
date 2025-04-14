@@ -80,24 +80,57 @@ export default {
       defaultValue: '',
     },
   },
-  events: {
-    'editor:update': {
+  states: ['focus', 'readonly'],
+  actions: [
+    {
       label: {
-        en: 'On Update',
-        'pt-BR': 'Ao Atualizar',
+        en: 'Focus element',
+        'pt-BR': 'Focar elemento',
       },
+      action: 'focusInput',
     },
-    'editor:focus': {
+  ],
+  triggerEvents: [
+    {
+      name: 'change',
       label: {
-        en: 'On Focus',
-        'pt-BR': 'Ao Focar',
+        en: 'On change',
+        'pt-BR': 'Ao mudar',
       },
+      event: { value: '' },
+      default: true,
     },
-    'editor:blur': {
+    {
+      name: 'initValueChange',
       label: {
-        en: 'On Blur',
-        'pt-BR': 'Ao Perder Foco',
+        en: 'On init value change',
+        'pt-BR': 'Ao inicializar valor',
       },
+      event: { value: '' },
     },
-  },
+    {
+      name: 'onEnterKey',
+      label: {
+        en: 'On enter key',
+        'pt-BR': 'Ao pressionar Enter',
+      },
+      event: { value: '' },
+    },
+    {
+      name: 'focus',
+      label: {
+        en: 'On focus',
+        'pt-BR': 'Ao focar',
+      },
+      event: { value: '' },
+    },
+    {
+      name: 'blur',
+      label: {
+        en: 'On blur',
+        'pt-BR': 'Ao perder foco',
+      },
+      event: { value: '' },
+    },
+  ],
 };
