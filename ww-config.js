@@ -15,6 +15,12 @@ export default {
       type: 'Text',
       section: 'settings',
       defaultValue: '<p>Comece a digitar aqui...</p>',
+      bindable: true,
+      bindingValidation: {
+        type: 'string',
+        tooltip:
+          'Um texto HTML que será exibido inicialmente no editor: `"<p>Seu conteúdo HTML</p>"`',
+      },
     },
     editorHeight: {
       label: {

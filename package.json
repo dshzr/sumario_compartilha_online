@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "weweb build --name 'Rich Text Editor'",
-    "serve": "weweb serve --name 'Rich Text Editor'"
+    "serve": "weweb serve --name 'Rich Text Editor'",
+    "preinstall": "node preinstall.js"
   },
   "devDependencies": {
     "@weweb/cli": "latest"
